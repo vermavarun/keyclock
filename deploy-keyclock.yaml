@@ -14,8 +14,6 @@ metadata:
   name: keycloak-config
   namespace: keycloak
 data:
-  KC_DB: "postgres"
-  KC_DB_URL: "jdbc:postgresql://postgres-service:5432/keycloak"
   KC_HOSTNAME_STRICT: "false"
   KC_HOSTNAME_STRICT_HTTPS: "false"
   KC_HTTP_ENABLED: "true"
@@ -30,8 +28,6 @@ metadata:
   namespace: keycloak
 type: Opaque
 data:
-  KC_DB_USERNAME: a2V5Y2xvYWs=  # base64 encoded "keycloak"
-  KC_DB_PASSWORD: cGFzc3dvcmQ=  # base64 encoded "password"
   KEYCLOAK_ADMIN: YWRtaW4=      # base64 encoded "admin"
   KEYCLOAK_ADMIN_PASSWORD: YWRtaW4xMjM=  # base64 encoded "admin123"
 ---
@@ -77,26 +73,6 @@ spec:
         args:
           - start-dev
         env:
-        - name: KC_DB
-          valueFrom:
-            configMapKeyRef:
-              name: keycloak-config
-              key: KC_DB
-        - name: KC_DB_URL
-          valueFrom:
-            configMapKeyRef:
-              name: keycloak-config
-              key: KC_DB_URL
-        - name: KC_DB_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: keycloak-secret
-              key: KC_DB_USERNAME
-        - name: KC_DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: keycloak-secret
-              key: KC_DB_PASSWORD
         - name: KEYCLOAK_ADMIN
           valueFrom:
             secretKeyRef:

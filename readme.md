@@ -332,15 +332,97 @@ kubectl top pods -n keycloak
 
 #### 2. Database Connection Issues
 
-```bash
-# Check database connectivity (if using external DB)
-kubectl exec -n keycloak deployment/keycloak -- nslookup postgres-service
-
-# Verify database credentials
-kubectl get secret keycloak-secret -n keycloak -o yaml
+**Problem**: Pods fail to start with database connection errors like:
+```
+ERROR: Failed to obtain JDBC connection
+ERROR: The connection attempt failed.
+ERROR: postgres-service
 ```
 
-#### 3. Service Access Issues
+**Solution**: The default configuration is set for H2 embedded database (development mode). If you see database connection errors:
+
+```bash
+# Check current configuration
+kubectl get configmap keycloak-config -n keycloak -o yaml
+
+# For development (using H2 database), ensure these DB variables are NOT set:
+# KC_DB, KC_DB_URL, KC_DB_USERNAME, KC_DB_PASSWORD
+
+# If you need PostgreSQL, first deploy a PostgreSQL instance:
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        env:
+        - name: POSTGRES_DB
+          value: "keycloak"
+        - name: POSTGRES_USER
+          value: "keycloak"
+        - name: POSTGRES_PASSWORD
+          value: "password"
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: keycloak
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+EOF
+
+# Then add database configuration back to ConfigMap and Secret
+```
+
+#### 3. Port-Forward Connection Issues
+
+**Problem**: Port-forwarding fails with errors like:
+```
+error: lost connection to pod
+E1023 17:05:29.370895 portforward.go:424] "Unhandled Error" err=<
+an error occurred forwarding 8080 -> 8080: Connection refused
+```
+
+**Solution**: This usually means pods are not ready or healthy.
+
+```bash
+# First, check if pods are ready
+kubectl get pods -n keycloak
+
+# If pods are not ready (0/1), check their status
+kubectl describe pod -n keycloak -l app=keycloak
+
+# Check pod logs for startup errors
+kubectl logs -n keycloak -l app=keycloak
+
+# Wait for pods to be ready before port-forwarding
+kubectl wait --for=condition=ready pod -l app=keycloak -n keycloak --timeout=300s
+
+# Then try port-forwarding again
+kubectl port-forward -n keycloak svc/keycloak-service 8080:8080
+```
+
+#### 4. Service Access Issues
 
 ```bash
 # Check service and endpoints
