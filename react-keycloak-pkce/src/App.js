@@ -4,6 +4,7 @@ import LoginPage from './components/LoginPage';
 import CallbackPage from './components/CallbackPage';
 import ProfilePage from './components/ProfilePage';
 import ProtectedRoute from './components/ProtectedRoute';
+import DebugPage from './components/DebugPage';
 import authService from './services/authService';
 import './App.css';
 
@@ -27,6 +28,8 @@ function App() {
           />
 
           <Route path="/callback" element={<CallbackPage />} />
+
+          <Route path="/debug" element={<DebugPage />} />
 
           <Route
             path="/profile"

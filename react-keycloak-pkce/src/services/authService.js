@@ -65,6 +65,18 @@ class AuthService {
     return `${keycloakConfig.serverUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/auth?${params.toString()}`;
   }
 
+  // Start the login process
+  async login() {
+    try {
+      console.log('Starting authentication...');
+      const authUrl = await this.buildAuthUrl();
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw new Error('Failed to start login process');
+    }
+  }
+
   // Exchange authorization code for tokens
   async exchangeCodeForTokens(code, state) {
     const storedState = localStorage.getItem(this.stateKey);
@@ -120,13 +132,49 @@ class AuthService {
       localStorage.removeItem(this.codeVerifierKey);
       localStorage.removeItem(this.stateKey);
 
-      // Fetch user info
-      await this.fetchUserInfo(access_token);
+      // Extract user info from ID token if available
+      if (id_token) {
+        try {
+          const userInfo = this.parseJWT(id_token);
+          localStorage.setItem(this.userInfoKey, JSON.stringify(userInfo));
+          console.log('User info extracted from ID token:', userInfo);
+        } catch (error) {
+          console.warn('Failed to parse ID token:', error);
+          // Fallback to userinfo endpoint
+          try {
+            await this.fetchUserInfo(access_token);
+          } catch (userInfoError) {
+            console.warn('UserInfo endpoint also failed, proceeding without user info');
+          }
+        }
+      } else {
+        // Try fetching from userinfo endpoint
+        try {
+          await this.fetchUserInfo(access_token);
+        } catch (userInfoError) {
+          console.warn('No ID token and UserInfo endpoint failed, proceeding without user info');
+        }
+      }
 
       return { access_token, refresh_token, id_token };
     } catch (error) {
       console.error('Token exchange failed:', error);
       throw new Error('Failed to exchange authorization code for tokens');
+    }
+  }
+
+  // Parse JWT token to extract user information
+  parseJWT(token) {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      throw new Error('Invalid JWT token');
     }
   }
 
@@ -189,8 +237,10 @@ class AuthService {
   // Logout
   async logout() {
     const idToken = this.getIdToken();
-    console.log('Logout - ID Token available:', !!idToken);
+    console.log('Logout process starting...');
+    console.log('ID Token available:', !!idToken);
     console.log('ID Token length:', idToken ? idToken.length : 0);
+    console.log('ID Token (first 50 chars):', idToken ? idToken.substring(0, 50) + '...' : 'none');
 
     // Clear local storage
     localStorage.removeItem(this.tokenKey);
@@ -200,12 +250,28 @@ class AuthService {
     localStorage.removeItem(this.codeVerifierKey);
     localStorage.removeItem(this.stateKey);
 
-    // Simple logout without id_token_hint for now
-    const logoutUrl = `${keycloakConfig.serverUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(keycloakConfig.postLogoutRedirectUri)}`;
+    // Try different logout approaches
+    try {
+      if (idToken) {
+        // First try with id_token_hint
+        const logoutUrlWithToken = `${keycloakConfig.serverUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/logout?id_token_hint=${idToken}&post_logout_redirect_uri=${encodeURIComponent(keycloakConfig.postLogoutRedirectUri)}`;
+        console.log('Trying logout with ID token hint...');
+        window.location.href = logoutUrlWithToken;
+      } else {
+        // Fallback to simple session logout
+        this.performSimpleLogout();
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      this.performSimpleLogout();
+    }
+  }
 
-    // Always use simple logout to avoid id_token_hint issues
-    console.log('Redirecting to:', logoutUrl);
-    window.location.href = logoutUrl;
+  // Simple logout fallback
+  performSimpleLogout() {
+    console.log('Performing simple logout...');
+    // Clear tokens and redirect to home
+    window.location.href = keycloakConfig.postLogoutRedirectUri;
   }
 
   // Check if user is authenticated
