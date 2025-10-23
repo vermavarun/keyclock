@@ -85,8 +85,8 @@ create_client() {
         "authorizationServicesEnabled": false,
         "fullScopeAllowed": true,
         "nodeReRegistrationTimeout": 0,
-        "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
-        "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"],
+        "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email", "offline_access"],
+        "optionalClientScopes": ["address", "phone", "microprofile-jwt"],
         "attributes": {
             "pkce.code.challenge.method": "S256",
             "post.logout.redirect.uris": "http://localhost:3000/",
@@ -146,6 +146,8 @@ update_client() {
         "serviceAccountsEnabled": false,
         "authorizationServicesEnabled": false,
         "fullScopeAllowed": true,
+        "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email", "offline_access"],
+        "optionalClientScopes": ["address", "phone", "microprofile-jwt"],
         "attributes": {
             "pkce.code.challenge.method": "S256",
             "post.logout.redirect.uris": "http://localhost:3000/",

@@ -79,6 +79,18 @@ class AuthService {
 
   // Exchange authorization code for tokens
   async exchangeCodeForTokens(code, state) {
+    console.log('🔄 Token exchange requested with code:', code?.substring(0, 10) + '...');
+
+    // Check if we already have valid tokens to prevent duplicate processing
+    if (this.isAuthenticated()) {
+      console.log('✅ Already authenticated, skipping token exchange');
+      return {
+        access_token: this.getAccessToken(),
+        refresh_token: localStorage.getItem(this.refreshTokenKey),
+        id_token: this.getIdToken()
+      };
+    }
+
     const storedState = localStorage.getItem(this.stateKey);
     const codeVerifier = localStorage.getItem(this.codeVerifierKey);
 
@@ -200,11 +212,17 @@ class AuthService {
   // Refresh access token
   async refreshToken() {
     const refreshToken = localStorage.getItem(this.refreshTokenKey);
+    console.log('🔄 Attempting token refresh...');
+    console.log('Refresh token available:', !!refreshToken);
+    console.log('Refresh token length:', refreshToken ? refreshToken.length : 0);
+
     if (!refreshToken) {
+      console.error('❌ No refresh token available');
       throw new Error('No refresh token available');
     }
 
     const tokenUrl = `${keycloakConfig.serverUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/token`;
+    console.log('Token URL:', tokenUrl);
 
     const params = new URLSearchParams({
       grant_type: 'refresh_token',
@@ -212,14 +230,25 @@ class AuthService {
       client_id: keycloakConfig.clientId
     });
 
+    console.log('Request parameters:', {
+      grant_type: 'refresh_token',
+      client_id: keycloakConfig.clientId,
+      refresh_token_length: refreshToken.length
+    });
+
     try {
       const response = await axios.post(tokenUrl, params.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        },
+        _isRefreshRequest: true  // Mark this as a refresh request to avoid interceptor loop
       });
 
       const { access_token, refresh_token: newRefreshToken } = response.data;
+
+      console.log('✅ Token refresh successful!');
+      console.log('New access token length:', access_token ? access_token.length : 0);
+      console.log('New refresh token received:', !!newRefreshToken);
 
       localStorage.setItem(this.tokenKey, access_token);
       if (newRefreshToken) {
@@ -228,8 +257,22 @@ class AuthService {
 
       return access_token;
     } catch (error) {
-      console.error('Token refresh failed:', error);
-      this.logout();
+      console.error('❌ Token refresh failed:');
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
+
+      // Log the specific error response for debugging
+      if (error.response?.data) {
+        console.error('Keycloak error response:', error.response.data);
+      }
+
+      // Don't automatically logout on refresh failure - just throw the error
       throw new Error('Failed to refresh token');
     }
   }
@@ -316,7 +359,7 @@ class AuthService {
     axios.interceptors.request.use(
       (config) => {
         const token = this.getAccessToken();
-        if (token) {
+        if (token && !config._isRefreshRequest) {
           config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
@@ -327,15 +370,22 @@ class AuthService {
     axios.interceptors.response.use(
       (response) => response,
       async (error) => {
-        if (error.response?.status === 401) {
+        const originalRequest = error.config;
+
+        // Don't try to refresh if this is already a refresh request or if we already tried
+        if (error.response?.status === 401 && !originalRequest._isRefreshRequest && !originalRequest._retry) {
+          originalRequest._retry = true;
+
           try {
+            console.log('🔄 401 detected, attempting token refresh...');
             await this.refreshToken();
-            // Retry the original request
-            const originalRequest = error.config;
+
+            // Retry the original request with new token
             const newToken = this.getAccessToken();
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             return axios(originalRequest);
           } catch (refreshError) {
+            console.error('❌ Token refresh failed in interceptor:', refreshError);
             this.logout();
             return Promise.reject(refreshError);
           }

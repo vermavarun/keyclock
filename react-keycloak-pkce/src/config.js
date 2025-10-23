@@ -5,7 +5,7 @@ export const keycloakConfig = {
   serverUrl: 'http://localhost:8081',
   redirectUri: 'http://localhost:3000/callback',
   postLogoutRedirectUri: 'http://localhost:3000/',
-  scope: 'openid profile email'
+  scope: 'openid profile email offline_access'
 };
 
 // PKCE configuration

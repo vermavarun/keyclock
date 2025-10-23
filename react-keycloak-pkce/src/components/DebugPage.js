@@ -36,6 +36,18 @@ const DebugPage = () => {
     authService.logout();
   };
 
+  const handleTestRefresh = async () => {
+    console.log('Starting debug token refresh test...');
+    try {
+      const newToken = await authService.refreshToken();
+      console.log('✅ Token refresh successful!', { newTokenLength: newToken.length });
+      // Refresh the debug info
+      window.location.reload();
+    } catch (error) {
+      console.error('❌ Token refresh failed:', error);
+    }
+  };
+
   const handleClearStorage = () => {
     Object.keys(localStorage)
       .filter(key => key.includes('keycloak'))
@@ -54,6 +66,9 @@ const DebugPage = () => {
         </button>
         <button onClick={handleTestLogout} style={{ marginRight: '10px', padding: '10px' }}>
           🚪 Test Logout
+        </button>
+        <button onClick={handleTestRefresh} style={{ marginRight: '10px', padding: '10px' }}>
+          🔄 Test Refresh
         </button>
         <button onClick={handleClearStorage} style={{ padding: '10px' }}>
           🗑️ Clear Storage

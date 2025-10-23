@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import './CallbackPage.css';
@@ -7,9 +7,17 @@ const CallbackPage = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState('processing');
   const [error, setError] = useState(null);
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
     const handleCallback = async () => {
+      // Prevent duplicate processing
+      if (hasProcessed.current) {
+        console.log('Callback already processed, skipping...');
+        return;
+      }
+
+      hasProcessed.current = true;
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
@@ -29,7 +37,7 @@ const CallbackPage = () => {
 
         setStatus('success');
         setTimeout(() => {
-          navigate('/profile');
+          window.location.href = '/profile';
         }, 2000);
 
       } catch (error) {
@@ -40,7 +48,7 @@ const CallbackPage = () => {
     };
 
     handleCallback();
-  }, [navigate]);
+  }, []); // Empty dependency array - only run once
 
   const renderContent = () => {
     switch (status) {
