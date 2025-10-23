@@ -1,0 +1,240 @@
+---
+# Namespace for Keycloak
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keycloak
+  labels:
+    name: keycloak
+---
+# ConfigMap for Keycloak configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-config
+  namespace: keycloak
+data:
+  KC_DB: "postgres"
+  KC_DB_URL: "jdbc:postgresql://postgres-service:5432/keycloak"
+  KC_HOSTNAME_STRICT: "false"
+  KC_HOSTNAME_STRICT_HTTPS: "false"
+  KC_HTTP_ENABLED: "true"
+  KC_HEALTH_ENABLED: "true"
+  KC_METRICS_ENABLED: "true"
+---
+# Secret for Keycloak credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-secret
+  namespace: keycloak
+type: Opaque
+data:
+  KC_DB_USERNAME: a2V5Y2xvYWs=  # base64 encoded "keycloak"
+  KC_DB_PASSWORD: cGFzc3dvcmQ=  # base64 encoded "password"
+  KEYCLOAK_ADMIN: YWRtaW4=      # base64 encoded "admin"
+  KEYCLOAK_ADMIN_PASSWORD: YWRtaW4xMjM=  # base64 encoded "admin123"
+---
+# Service for Keycloak
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-service
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  type: ClusterIP
+---
+# Deployment for Keycloak with 3 replicas
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:23.0
+        args:
+          - start-dev
+        env:
+        - name: KC_DB
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB
+        - name: KC_DB_URL
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB_URL
+        - name: KC_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: KC_DB_USERNAME
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: KC_DB_PASSWORD
+        - name: KEYCLOAK_ADMIN
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: KEYCLOAK_ADMIN
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-secret
+              key: KEYCLOAK_ADMIN_PASSWORD
+        - name: KC_HOSTNAME_STRICT
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HOSTNAME_STRICT
+        - name: KC_HOSTNAME_STRICT_HTTPS
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HOSTNAME_STRICT_HTTPS
+        - name: KC_HTTP_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HTTP_ENABLED
+        - name: KC_HEALTH_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HEALTH_ENABLED
+        - name: KC_METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_METRICS_ENABLED
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /realms/master
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+# Ingress for Keycloak (optional - uncomment if needed)
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: keycloak-ingress
+#   namespace: keycloak
+#   annotations:
+#     kubernetes.io/ingress.class: "nginx"
+#     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+# spec:
+#   rules:
+#   - host: keycloak.local
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: keycloak-service
+#             port:
+#               number: 8080
+---
+# PostgreSQL Service (if you need a database - optional)
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: postgres-service
+#   namespace: keycloak
+# spec:
+#   selector:
+#     app: postgres
+#   ports:
+#     - port: 5432
+#       targetPort: 5432
+# ---
+# PostgreSQL Deployment (if you need a database - optional)
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: postgres
+#   namespace: keycloak
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: postgres
+#   template:
+#     metadata:
+#       labels:
+#         app: postgres
+#     spec:
+#       containers:
+#       - name: postgres
+#         image: postgres:15
+#         env:
+#         - name: POSTGRES_DB
+#           value: "keycloak"
+#         - name: POSTGRES_USER
+#           value: "keycloak"
+#         - name: POSTGRES_PASSWORD
+#           value: "password"
+#         ports:
+#         - containerPort: 5432
+#         volumeMounts:
+#         - name: postgres-storage
+#           mountPath: /var/lib/postgresql/data
+#       volumes:
+#       - name: postgres-storage
+#         emptyDir: {}
