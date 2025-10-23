@@ -1,10 +1,11 @@
-# Keycloak Kubernetes Deployment
+# Keycloak Kubernetes Deployment with React PKCE Demo
 
-A comprehensive Kubernetes deployment configuration for running Keycloak Identity and Access Management with high availability (3 replicas) in a dedicated namespace.
+A comprehensive Kubernetes deployment configuration for running Keycloak Identity and Access Management with high availability (3 replicas) in a dedicated namespace, plus a complete React application demonstrating PKCE authentication flow.
 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [React PKCE Demo](#react-pkce-demo)
 - [Architecture](#architecture)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
@@ -17,14 +18,52 @@ A comprehensive Kubernetes deployment configuration for running Keycloak Identit
 
 ## 🌐 Overview
 
-This project provides a production-ready Keycloak deployment on Kubernetes with the following features:
+This project provides a complete identity and access management solution with:
 
+### **Keycloak Kubernetes Deployment**
 - **High Availability**: 3 pod replicas with load balancing
 - **Dedicated Namespace**: Isolated `keycloak` namespace
 - **Security**: Non-root containers with proper security contexts
 - **Health Monitoring**: Readiness and liveness probes
 - **Resource Management**: CPU and memory limits
 - **Scalable**: Easy to scale up/down as needed
+
+### **React PKCE Authentication Demo**
+- **🔐 Secure PKCE Flow**: OAuth 2.0 with Proof Key for Code Exchange
+- **🔄 Auto Token Refresh**: Seamless token management
+- **👤 User Profile**: Complete user information display
+- **🛡️ Protected Routes**: Authentication-based route protection
+- **📱 Modern UI**: Responsive, beautiful design
+
+## 🚀 React PKCE Demo
+
+The `react-keycloak-pkce` directory contains a complete React application demonstrating secure authentication using OAuth 2.0 PKCE flow.
+
+### Quick Start with React Demo
+
+```bash
+# 1. Ensure Keycloak is running (see deployment section below)
+kubectl get pods -n keycloak
+
+# 2. Start port-forwarding
+kubectl port-forward -n keycloak svc/keycloak-service 8080:8080
+
+# 3. Set up the React app
+cd react-keycloak-pkce
+npm install
+npm start
+
+# 4. Open http://localhost:3000
+```
+
+### Features Demonstrated
+- **PKCE Security**: Complete implementation of OAuth 2.0 PKCE
+- **Token Management**: Automatic refresh and secure storage
+- **Error Handling**: Graceful authentication error management
+- **Modern UI**: Beautiful, responsive interface with animations
+- **Real-time Status**: Live authentication and token status
+
+**📖 [Complete React Demo Documentation](./react-keycloak-pkce/README.md)**
 
 ## 🏗️ Architecture
 

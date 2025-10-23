@@ -1,0 +1,33 @@
+{
+  "name": "keycloak-kubernetes-demo",
+  "version": "1.0.0",
+  "description": "Keycloak Kubernetes deployment with React PKCE authentication demo",
+  "scripts": {
+    "setup": "./setup-demo.sh",
+    "deploy-keycloak": "kubectl apply -f deploy-keyclock.yaml",
+    "port-forward": "kubectl port-forward -n keycloak svc/keycloak-service 8080:8080",
+    "status": "kubectl get all -n keycloak",
+    "logs": "kubectl logs -n keycloak -l app=keycloak --tail=100",
+    "start-react": "cd react-keycloak-pkce && npm start",
+    "install-react": "cd react-keycloak-pkce && npm install"
+  },
+  "keywords": [
+    "keycloak",
+    "kubernetes",
+    "oauth2",
+    "pkce",
+    "react",
+    "authentication",
+    "security",
+    "oidc"
+  ],
+  "author": "Varun Verma",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vermavarun/keyclock.git"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
