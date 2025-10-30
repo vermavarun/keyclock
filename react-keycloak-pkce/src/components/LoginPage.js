@@ -13,6 +13,16 @@ const LoginPage = () => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      const authUrl = await authService.buildAuthUrl('google');
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('Google login failed:', error);
+      alert('Google login failed. Please try again.');
+    }
+  };
+
   return (
     <div className="login-container">
       <div className="login-card">
@@ -37,13 +47,27 @@ const LoginPage = () => {
             </div>
           </div>
 
-          <button
-            className="login-button"
-            onClick={handleLogin}
-          >
-            <span className="button-icon">🚀</span>
-            Login with Keycloak
-          </button>
+          <div className="login-buttons">
+            <button
+              className="login-button keycloak-button"
+              onClick={handleLogin}
+            >
+              <span className="button-icon">🚀</span>
+              Login with Keycloak
+            </button>
+
+            <div className="divider">
+              <span className="divider-text">or</span>
+            </div>
+
+            <button
+              className="login-button google-button"
+              onClick={handleGoogleLogin}
+            >
+              <span className="button-icon">🔍</span>
+              Sign in with Google
+            </button>
+          </div>
 
           <div className="info-section">
             <p className="info-text">

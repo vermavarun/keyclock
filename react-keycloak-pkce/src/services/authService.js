@@ -43,7 +43,7 @@ class AuthService {
   }
 
   // Build authorization URL
-  async buildAuthUrl() {
+  async buildAuthUrl(identityProvider = null) {
     const codeVerifier = this.generateCodeVerifier();
     const codeChallenge = await this.generateCodeChallenge(codeVerifier);
     const state = this.generateState();
@@ -62,14 +62,19 @@ class AuthService {
       state: state
     });
 
+    // Add identity provider hint if specified (for Google SSO)
+    if (identityProvider) {
+      params.append('kc_idp_hint', identityProvider);
+    }
+
     return `${keycloakConfig.serverUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/auth?${params.toString()}`;
   }
 
   // Start the login process
-  async login() {
+  async login(identityProvider = null) {
     try {
-      console.log('Starting authentication...');
-      const authUrl = await this.buildAuthUrl();
+      console.log(`Starting authentication${identityProvider ? ` with ${identityProvider}` : ''}...`);
+      const authUrl = await this.buildAuthUrl(identityProvider);
       window.location.href = authUrl;
     } catch (error) {
       console.error('Login failed:', error);
