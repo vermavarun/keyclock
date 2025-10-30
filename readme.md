@@ -46,7 +46,7 @@ The `react-keycloak-pkce` directory contains a complete React application demons
 kubectl get pods -n keycloak
 
 # 2. Start port-forwarding
-kubectl port-forward -n keycloak svc/keycloak-service 8080:8080
+kubectl port-forward -n keycloak svc/keycloak-service 8081:8080
 
 # 3. Set up the React app
 cd react-keycloak-pkce
